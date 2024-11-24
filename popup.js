@@ -136,7 +136,7 @@ document.addEventListener("DOMContentLoaded", function () {
   
   // Функция для проверки обновлений
   async function checkForUpdates() {
-      const repoUrl = "https://api.github.com/repos/Processori7/FreeAiChromeSidebar/contents/manifest.json";
+      const repoUrl = "https://api.github.com/repos/Processori7/FreeAi_Yandex_Opera_Ext/contents/manifest.json";
       
       // Получаем локальную версию из manifest.json расширения
       //const localVersion = "16.6.27"; // Для тестирования;
@@ -162,7 +162,7 @@ document.addEventListener("DOMContentLoaded", function () {
   
               // Добавляем обработчик клика на сообщение
               updateMessageElement.onclick = function() {
-                  window.open("https://github.com/Processori7/FreeAiChromeSidebar", "_blank");
+                  window.open("https://github.com/Processori7/FreeAi_Yandex_Opera_Ext", "_blank");
                   updateMessageElement.style.display = 'none'; // Скрываем сообщение после клика
               };
           }
