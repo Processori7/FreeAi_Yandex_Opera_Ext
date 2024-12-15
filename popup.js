@@ -4,8 +4,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const searchInput = document.getElementById('searchInput');
     const userLang = navigator.language || navigator.userLanguage; 
     const items = document.querySelectorAll('.aiMenu li'); // Получаем все элементы li из всех списков
-    const headerMenuToggle = document.getElementById("header-menu-toggle");
-    const headerDropdownMenu = document.getElementById("header-dropdown-menu");
     const h1items = document.querySelectorAll('h1');
     const favoriteCheckbox =  document.getElementById("favoriteCheckbox");
     const openOnRightClick = document.getElementById("openOnRightClick");
@@ -30,6 +28,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const snowcont = document.getElementById('snowcont');
     const treecont = document.getElementById('treecont');
     const advancedSearch = document.getElementById('advancedSearch');
+    const headerMenuToggle = document.getElementById("header-menu-toggle");
+    const headerDropdownMenu = document.getElementById("header-dropdown-menu");
+    const themeMenuToggle = document.getElementById("theme-menu-toggle");
+    const themeDropdownMenu = document.getElementById("theme-dropdown-menu");
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    body.style.minWidth = `${width}px`;
+    body.style.minHeight = `${height}px`;
     // Флаг для отслеживания, добавлены ли чекбоксы
     let checkboxesAdded = false;
     let isMenuVisible = false; // Флаг для отслеживания состояния меню
@@ -136,7 +142,7 @@ document.addEventListener("DOMContentLoaded", function () {
   
   // Функция для проверки обновлений
   async function checkForUpdates() {
-      const repoUrl = "https://api.github.com/repos/Processori7/FreeAi_Yandex_Opera_Ext/contents/manifest.json";
+      const repoUrl = "https://api.github.com/repos/Processori7/FreeAiChromeSidebar/contents/manifest.json";
       
       // Получаем локальную версию из manifest.json расширения
       //const localVersion = "16.6.27"; // Для тестирования;
@@ -162,7 +168,7 @@ document.addEventListener("DOMContentLoaded", function () {
   
               // Добавляем обработчик клика на сообщение
               updateMessageElement.onclick = function() {
-                  window.open("https://github.com/Processori7/FreeAi_Yandex_Opera_Ext", "_blank");
+                  window.open("https://github.com/Processori7/FreeAiChromeSidebar", "_blank");
                   updateMessageElement.style.display = 'none'; // Скрываем сообщение после клика
               };
           }
@@ -199,17 +205,62 @@ document.addEventListener("DOMContentLoaded", function () {
       headerDropdownMenu.appendChild(menuItem);
   });
   
-  // Обработчик клика для открытия/закрытия меню
-  headerMenuToggle.addEventListener("click", function () {
-      headerDropdownMenu.style.display = headerDropdownMenu.style.display === "block" ? "none" : "block";
-  });
-  
-  // Закрытие меню при клике вне его
-  document.addEventListener("click", function (event) {
-      if (!headerMenuToggle.contains(event.target) && !headerDropdownMenu.contains(event.target)) {
+  function smoothScroll(target, duration) {
+    const start = window.scrollY;
+    const end = target.getBoundingClientRect().top + start;
+    const distance = end - start;
+    let startTime = null;
+
+    function animation(currentTime) {
+        if (startTime === null) startTime = currentTime;
+        const timeElapsed = currentTime - startTime;
+        const progress = Math.min(timeElapsed / duration, 1);
+        window.scrollTo(0, start + distance * progress);
+
+        if (timeElapsed < duration) {
+            requestAnimationFrame(animation);
+        }
+    }
+
+    requestAnimationFrame(animation);
+}
+
+  // Обработчик клика по кнопке основного меню
+  if (headerMenuToggle && headerDropdownMenu) {
+      headerMenuToggle.addEventListener("click", function(event) {
+        event.stopPropagation();
+        headerDropdownMenu.style.display = headerDropdownMenu.style.display === "block" ? "none" : "block";
+        if (themeDropdownMenu) {
+          themeDropdownMenu.style.display = "none";
+        }
+      });
+    }
+    
+    // Обработчик клика по кнопке меню темы
+    if (themeMenuToggle && themeDropdownMenu) {
+      themeMenuToggle.addEventListener("click", function(event) {
+        event.stopPropagation();
+        themeDropdownMenu.style.display = themeDropdownMenu.style.display === "block" ? "none" : "block";
+        if (headerDropdownMenu) {
           headerDropdownMenu.style.display = "none";
+        }
+      });
+    }
+    
+    // Закрытие меню при клике вне его
+    document.addEventListener("click", function(event) {
+      if (headerMenuToggle && headerDropdownMenu && 
+          !headerMenuToggle.contains(event.target) && 
+          !headerDropdownMenu.contains(event.target)) {
+        headerDropdownMenu.style.display = "none";
       }
-  });
+      
+      if (themeMenuToggle && themeDropdownMenu && 
+          !themeMenuToggle.contains(event.target) && 
+          !themeDropdownMenu.contains(event.target)) {
+        themeDropdownMenu.style.display = "none";
+      }
+    });
   
     // Сохранение состояния чекбоксов
     function updateOpenOnRightClickState() {
@@ -243,8 +294,9 @@ document.addEventListener("DOMContentLoaded", function () {
   
   // Сохраняем исходный порядок элементов при загрузке страницы
   function saveOriginalOrder() {
-      const itemsArray = Array.from(items);
-      originalOrder = itemsArray.map(item => item.getAttribute('data-website'));
+      items.forEach((item, index) => {
+          item.setAttribute('data-original-index', index);
+      });
   }
   
   function saveFavorites() {
@@ -311,46 +363,51 @@ document.addEventListener("DOMContentLoaded", function () {
       }
   });
   
-  searchInput.addEventListener('input', function() {
-      const filter = searchInput.value.toLowerCase();
-      const filterWords = filter.split(); // Разбиваем фильтр на слова
-      console.log(filterWords);
-      
+  //Поиск
+searchInput.addEventListener('input', function() {
+  const filter = searchInput.value.toLowerCase().trim();
+  const filterWords = filter.split(/\s+/).filter(word => word.length > 0); // Split by spaces and remove empty strings
+  
+  if (!filter) {
+      // If search is empty, show all items
       items.forEach(item => {
-          const text = item.textContent || item.innerText;
-          const website = item.getAttribute('data-website'); // Получаем URL сайта
-          let descriptionText = ""; // Переименуем переменную для ясности
-          
-          if (userLang.startsWith("ru")) {
-              descriptionText = websiteDescriptionsRu[website]; // Получаем описание по URL
-          } else {
-              let userDesc = localStorage.getItem('translatedDescriptions');
-  
-              // Проверяем, есть ли данные в localStorage
-              if (userDesc) {
-                  // Преобразуем строку в объект
-                  userDesc = JSON.parse(userDesc);
-  
-                  // Теперь вы можете получить описание по URL
-                  const description = userDesc.find(item => item.url === website); // Используем find для поиска по URL
-  
-                  if (description) {
-                      descriptionText = description.translatedText; // Получаем переведенный текст
-                  }
+          item.style.display = "";
+      });
+      return;
+  }
+
+  items.forEach(item => {
+      const text = (item.textContent || item.innerText).toLowerCase();
+      const website = item.getAttribute('data-website');
+      let descriptionText = "";
+      
+      // Get description based on language
+      if (userLang.startsWith("ru")) {
+          descriptionText = websiteDescriptionsRu[website] || "";
+      } else {
+          let userDesc = localStorage.getItem('translatedDescriptions');
+          if (userDesc) {
+              userDesc = JSON.parse(userDesc);
+              const description = userDesc.find(desc => desc.url === website);
+              if (description) {
+                  descriptionText = description.translatedText;
               }
           }
-  
-          // Проверяем, содержится ли хотя бы одно слово из фильтра в тексте или описании
-          const matchesText = filterWords.some(word => text.toLowerCase().includes(word));
-          const matchesDescription = filterWords.some(word => descriptionText.toLowerCase().includes(word));
-  
-          if (matchesText || matchesDescription) {
-              item.style.display = ""; // Показываем элемент
-          } else {
-              item.style.display = "none"; // Скрываем элемент
-          }
-      });
+      }
+      descriptionText = descriptionText.toLowerCase();
+
+      // First check if any word matches the element text
+      const matchesText = filterWords.some(word => text.includes(word));
+      if (matchesText) {
+          item.style.display = ""; // Show item if text matches
+          return;
+      }
+
+      // If text doesn't match, check description
+      const matchesDescription = filterWords.some(word => descriptionText.includes(word));
+      item.style.display = matchesDescription ? "" : "none";
   });
+});
   
   // Функция для перевода текста
   function translateText(text, lang) {
@@ -376,6 +433,12 @@ document.addEventListener("DOMContentLoaded", function () {
         openOnRightClick.nextSibling.textContent="Открывать сайт в новой вкладке при нажатии правой кнопкой мыши";
         copyOnRightClick.nextSibling.textContent="Копировать ссылку при нажатии правой кнопкой мыши";
         NewYearTheme.nextSibling.textContent = "Новогодняя тема";
+        document.querySelector('#theme-settings-title').textContent = 'Настройки темы';
+        document.querySelector('#background-color .translate-text').textContent = 'Цвет фона:';
+        document.querySelector('#text-color-headings .translate-text').textContent = 'Цвет заголовков:';
+        document.querySelector('#li-back-color .translate-text').textContent = 'Цвет фона элементов:';
+        document.querySelector('#li-text-color .translate-text').textContent = 'Цвет текста элементов:';
+        document.querySelector('#resetTheme .translate-text').textContent = 'Сбросить тему';
         advancedSearch.style.display = "none";
         document.getElementById('advancedSearchText').style.display="none";
     }
@@ -408,6 +471,12 @@ document.addEventListener("DOMContentLoaded", function () {
   openOnRightClick.nextSibling.textContent=translateText("Открывать сайт в новой вкладке при нажатии правой кнопкой мыши", "ru");
   copyOnRightClick.nextSibling.textContent=translateText("Копировать ссылку при нажатии правой кнопкой мыши", "ru");
   NewYearTheme.nextSibling.textContent = translateText("Новогодняя тема", "ru");
+  document.querySelector('#theme-settings-title').textContent = translateText('Настройки темы', "ru");
+  document.querySelector('#background-color .translate-text').textContent = translateText('Цвет фона:', "ru");
+  document.querySelector('#text-color-headings .translate-text').textContent = translateText('Цвет заголовков:', "ru");
+  document.querySelector('#li-back-color .translate-text').textContent = translateText('Цвет фона элементов:', "ru");
+  document.querySelector('#li-text-color .translate-text').textContent = translateText('Цвет текста элементов:', "ru");
+  document.querySelector('#resetTheme .translate-text').textContent = translateText('Сбросить тему', "ru");
   advancedSearch.nextSibling.textContent = translateText("Enable contextual search (Attention! Initialization can take up to 20 seconds on first startup)", "en");
   document.getElementById('advancedSearchText').style.display="block";
     }
@@ -420,7 +489,7 @@ document.addEventListener("DOMContentLoaded", function () {
   
     function initializePage() {
       saveOriginalOrder()
-      // Сохраняем оригинальное содержимое
+      // Сохраняем исходный порядок элементов при загрузке страницы
       originalContent = document.body.innerHTML;
   
       // Восстанавливаем состояние избранного при инициализации страницы
@@ -490,7 +559,9 @@ document.addEventListener("DOMContentLoaded", function () {
                   "https://tinywow.com/tools/write","https://huggingface.co/spaces/DamarJati/FLUX.1-RealismLora","https://yce.perfectcorp.com/colorize","https://venice.ai/chat","https://huggingface.co/chat/","https://app.giz.ai/assistant?mode=chat",
                   "https://huggingface.co/spaces/OzzyGT/diffusers-image-fill","https://app.myshell.ai/explore","https://huggingface.co/spaces/TheEeeeLin/HivisionIDPhotos","https://huggingface.co/spaces/fffiloni/expression-editor","https://komo.ai/","https://pythonspath.ru/gpt4o",
                   "https://huggingface.co/spaces/kayfahaarukku/fufufafa-makan-brem","https://gpt-4o.biz/playground","https://gpt4o.so/ru/app","https://rubiks.ai/","https://julius.ai/ai-chatbot","https://chat.eqing.tech/","https://ai.mitup.ru/chatgpt-free","https://magictellers.com/",
-                  "https://tools.rotato.app/compress","https://huggingface.co/spaces/aifeifei798/FeiFei-Lora-8step","https://www.eraser.io/diagramgpt","https://huggingface.co/spaces/AI4Editing/MagicQuill"];
+                  "https://tools.rotato.app/compress","https://huggingface.co/spaces/aifeifei798/FeiFei-Lora-8step","https://www.eraser.io/diagramgpt","https://huggingface.co/spaces/AI4Editing/MagicQuill","https://www.askmarcus.app/chat", "https://huggingface.co/spaces/fffiloni/text-guided-image-colorization",
+                  "https://huggingface.co/spaces/aifeifei798/FeiFei-Lora-8step","https://www.eraser.io/diagramgpt","https://huggingface.co/spaces/AI4Editing/MagicQuill","https://www.askmarcus.app/chat", "https://huggingface.co/spaces/fffiloni/text-guided-image-colorization",
+                  "https://huggingface.co/spaces/JeffreyXiang/TRELLIS","https://discord.com/invite/domoai","https://aistudio.google.com/live"];
                   if (openInNewTab.checked) {
                       window.open(website, '_blank');
                   } else {
@@ -621,7 +692,7 @@ document.addEventListener("DOMContentLoaded", function () {
       "https://www.prefind.ai/": "Бесплатная поисковая система, доступны модели: Llama 3, Claude 3.",
       "https://www.blackbox.ai/": "Бесплатно: BlackBox AI LLM, на сайте есть тёмная тема.",
       "https://www.perplexity.ai/": "Бесплатная поисковая система, на сайте есть тёмная тема, использует GPT-3.5 Turbo",
-      "https://chat.tune.app/": "Бесплатно досткпны несколько LLM, а остальные доступные после регистрации, на сайте есть тёмная тема.",
+      "https://chat.tune.app/": "Бесплатно досткпны несколько LLM, а остальные доступные после регистрация, на сайте есть тёмная тема.",
       "https://labs.perplexity.ai/": "Бесплатно доступны несколько моделей LLM, на сайте есть тёмная тема.",
       "https://jeeves.ai/": "Бесплатная поисковая система, доступны модели: Jeeves LLM, на сайте есть тёмная тема.",
       "https://bagoodex.io/": "Бесплатная поисковая система, использует GPT-4o, BaGooDex чат и другие инструменты, доступна тёмная тема.",
@@ -639,7 +710,7 @@ document.addEventListener("DOMContentLoaded", function () {
       "https://chat.lmsys.org/": "Большая платформа для тестирования различных ИИ, но некоторые имеют ограничения, на сайте есть тёмная тема, а также возможно использовать несколько LLM одновременно.",
       "https://chat.deepseek.com/": "ИИ для программистов, отлично справляется с написанием кода, но требуется регистрация.",
       "https://chatgate.ai/gpt4/": "Бесплатно: ChatGPT-4 и другие инструменты, но с ограничениями.",
-      "https://agentgpt.reworkd.ai/ru": "Это сервис, который может находить решения ваших проблем, для этого нужно напишисать, что вам нужно, и он предложит варианты, однако функционал доступен только после регистрация, а также на сайте есть тёмная тема.",
+      "https://agentgpt.reworkd.ai/ru": "Это сервис, который может находить решения ваших проблем, для этого нужно напишисить, что вам нужно, и он предложит варианты, однако функционал доступен только после регистрация, а также на сайте есть тёмная тема.",
       "https://smartbuddy.ru/models/gpt-4-omni": "Бесплатно GPT-4o, с ограничениями.",
       "https://andisearch.com/": "Бесплатная поисковая система.",
       "https://anonchatgpt.com/": "Бесплатно GPT-3.5, на сайте есть тёмная тема.",
@@ -714,12 +785,11 @@ document.addEventListener("DOMContentLoaded", function () {
       "https://app.scenario.com/upscale": "Scenario — это инструмент для создания игровых персонажей с использованием ИИ.",
       "https://easywithai.com/tools/vidiq": "Это инструмент роста для создателей YouTube, который теперь имеет функции ИИ.",
       "https://www.noota.io/": "Нейронная сеть, которая извлекает информацию из любых встреч, включая конференции, голосовые сообщения и подкасты.",
-      "https://smartbuddy.ru/models/gpt-4o-mini": "Чат с GPT-4o-mini.",
       "https://websim.ai/": "ИИ ответит на вопросы и также создаст что угодно, все версии Claude и GPT-4o доступны, но требуется регистрация.",
       "https://spline.design/": "Генератор 3D-моделей на основе нейронной сети прямо в браузере, требуется регистрация.",
       "https://mojo-app.com/ai": "ИИ для анимации логотипов.",
       "https://www.fontspace.com/": "Сервис для дизайнеров с 120 тысячами шрифтов в одном месте, бесплатно, также есть генератор и автоматизированный поиск.",
-      "https://huggingface.co/spaces/Xenova/whisper-word-level-timestamps": "Нейронная сеть быстро и бесплатно преобразует видео в текст, просто загрузите исходник и получите транскрипцию.",
+      "https://huggingface.co/spaces/Xenova/whisper-word-level-timestamps": "Нейронная сеть быстро и бесплатно преобразовывает видео в текст, просто загрузите исходник и получите транскрипцию.",
       "https://huggingface.co/spaces/gokaygokay/Tile-Upscaler": "Нейронная сеть, которая позволяет улучшать размытые фотографии прямо в вашем браузере, это бесплатный аналог Upscayl с максимальным увеличением 20x.",
       "https://github.com/Anjok07/ultimatevocalremovergui/releases": "Сервис ИИ отделяет музыку от вокала и делит трек на отдельные дорожки, данный сервис полностью бесплатен и позволяет извлекать из музыкальных композиций.",
       "https://huggingface.co/spaces/yizhezhu/MoMA_zeroGPU": "ИИ сгенерирует изображение из другого изображения бесплатно, просто напишите запрос, загрузите ссылку и получите результат.",
@@ -768,70 +838,6 @@ document.addEventListener("DOMContentLoaded", function () {
       "https://easywithai.com/tools/linkzai":"Сервис добавляет предварительный просмотр ссылок в реальном времени на ваш сайт, увеличивая вовлеченность и снижая процент отказов",
       "https://rugpt.io/nejroset-dlya-rekomendacii-filmov":"Этот чат-бот подберёт для вас фильм, нужно просто написать ему запрос.",
       "https://reflection-playground-production.up.railway.app/":"Reflection ИИ исправляет свои же ошибки, особенно в логике и обучается сама",
-      "https://mootion.com/":"Сервис позволяет легко создавать анимированных 3D-персонажей и сцены, используя текстовые подсказки или видео в качестве основы",
-      "https://molypix.ai/general-poster":"Нейросеть, которая сделает любой графический дизайн",
-      "https://musichero.ai/ru/app":"Бесплатный генератор музыки из текстовых запросов",
-      "https://www.webcrumbs.org/frontend-ai":"Инструмент для генерации веб-компонентов и интерфейсов из изображений и текста с возможностью экспорта",
-      "https://elevenlabs.io/dubbing":"Нейросеть может полностью переводить видеоролики и фильмы, сохраняя подлинные голоса, при необходимости редактируя отдельные фрагменты, короткие ролики обрабатывает бесплатно",
-      "https://supabase-community.github.io/babelfish.ai/":"Это онлайн-инструмент, который переводит речь в текст на более чем 200 языков",
-      "https://huggingface.co/spaces/GanymedeNil/Qwen2-VL-7B":"Нейросеть для распознования рукописного текста с большой точностью",
-      "https://www.chatize.com":"Сервис позволяет загружать различные документы и задавать в чате вопросы, а ИИ будет отвечать на вопросы, используя загруженный документ",
-      "https://www.i2text.com/ru/ai-writer":"Бесплатный и функциональный генератор текста, способный создавать статьи, эссе, сценарии, прозу, слоганы и многое другое, а затем скачивать получившийся текст",
-      "https://magictellers.com/":"ИИ, который позволяет создавать персонализированные истории, детские книги и книжки-раскраски",
-      "https://www.mathgptpro.com/":"ИИ агент, который специализируется на математике, обрабатывает примеры в любом формате: текст, фото и даже голосовое описание",
-      "https://straico.com/":"Сервис предлагает широкий спектр мощных генеративных инструментов ИИ, которые могут помочь вам в различных творческих начинаниях, от От написания и обобщения контента ИИ до создания изображений и анализа PDF, эти инструменты используют передовые алгоритмы ИИ, чтобы помочь оптимизировать ваш рабочий процесс и повысить вашу производительность",
-      "https://nexra.aryahcr.cc/en":"Сервис позволяет интегрировать ИИ в различные проекты",
-      "https://www.promptrefine.com/prompt/new":"Сервис позволяет задавать вопросы к различным моделям ChatGPT",
-      "https://www.patterned.ai/":"Сервис позволяет создавать и искать бесшовные шаблоны и текстуры, не защищенные авторским правом",
-      "https://hailuoai.video/":"Сервис для генерации видео",
-      "https://huggingface.co/spaces/finegrain/finegrain-object-cutter":"ИИ аккуратно вырежет нужные объекты с изображений, просто загружаем фото и пишем, что конкретно необходимо вырезать",
-      "https://bgeraser.com/":"Средство для удаления фона изображений, которое также может удалять отдельные объекты",
-      "https://www.tripo3d.ai/app":"Нейросеть для генерации 3D-моделей, на старте дают 600 кредитов, это примерно 10-24 генераций",
-      "https://swimm.ai/":"Удобный инструмент документации кода, который использует ИИ для упрощения процесса создания и организации документации для вашего кода или приложения",
-      "https://huggingface.co/spaces/yanze/PuLID-FLUX":"Сервис для генерации реалистичных картинок высокого качества",
-      "https://seapik.com/":"Это комплексная онлайн-платформа AI, предлагающая ряд мощных и удобных инструментов AI для создания и редактирования контента",
-      "https://convert.leiapix.com/":"Бесплатный инструмент обработки изображений, который преобразует 2D-изображения в 3D-изображения Lightfield",
-      "https://llamatutor.together.ai/":"Бесплатный инструмент, который поможет выучить что угодно",
-      "https://artbit.ai/":"Беслплатный генератор изображений с возможностью выбора количества изображений и их размера",
-      "https://chatgpt.es":"Сервис предоставляет возможность использовать GPT4o бесплатно.",
-      "https://huggingface.co/jasperai/Flux.1-dev-Controlnet-Upscaler":"Сервис поднимает разрешение изображения, тем самым делая картинку более чёткой",
-      "https://learnfast.ai/ru/app":"Бесплатный сервис, который поможет выучить что-то новое",
-      "https://huggingface.co/spaces/fffiloni/diffusers-image-outpaint":"Бесплатная нейросеть, расширяющая любые фотографии, просто загружаем картинку, выбираем нужное соотношение сторон и нажимаем «Генерировать»",
-      "https://www.i2img.com/":"Это удобный фоторедактор прямо в браузере, который способен удалить фон, раскрасить ч/б фото, улучшить качество и многое другое",
-      "https://www.relume.io/":"Бесплатный генератор сайтов, хорошо подходит для создания лендингов",
-      "https://wegic.ai/":"Конструктор сайтов на основе чата, который может создавать профессиональные многостраничные веб-сайты с помощью разговоров - не требуются навыки программирования или дизайна, идеально подходит для новичков.",
-      "https://reactor.helloarc.ai/chat":"Бесплатный интерактивный чат-бот, целью которого является обеспечение энергоэффективного и высокопроизводительного разговорного ИИ, для использования необходимо войти в систему",
-      "https://huggingface.co/spaces/DamarJati/FLUX.1-RealismLora":"Бесплатный генератор реалистичных изображений, просто введите промт, нажмите 'Generate' и ожидайте результат",
-      "https://undetectio.com/":"Инструмент перефразирования контента на основе нейросети, который предназначен для того, чтобы сделать ваш контент, необнаружимым детекторами контента ИИ, сервис предлагает бесплатный план с 1000 словами в месяц",
-      "https://www.freepik.com/pikaso":"Генератор эскизов для изображений с ИИ, который превращает ваши рисунки и идеи в жизнь в режиме реального времени",
-      "https://yce.perfectcorp.com/colorize":"Сервис раскрасит любое фото, цвета получаются натуральными и насыщенными, войдите используя почту, чтобы скачать фото без вотерки",
-      "https://www.figma.com/community/plugin/1326990370920029683/figma-to-replit":"Плагин конвертирует ваши дизайны сразу в приложения на HTML, CSS или React, при этом финальный результат вам не составит труда экспортировать, запустить или подредактировать код.",
-      "https://tinywow.com/tools/write":"Это огромнейшая база ИИ для работы с текстом, доступно множество возможностей от генерации текста до проверки текста на наличия различных ошибок",
-      "https://imagecolorizer.com/":"Это бесплатный онлайн-инструмент на основе ИИ, который может автоматически раскрашивать и восстанавливать старые черно-белые фотографии",
-      "https://melody.ml/":"Сервис позволяет легко разделить аудиодорожки с помощью машинного обучения бесплатно, при этом автоматически изолируйте вокал и генерируйте стебы для ремиксов песен",
-      "https://venice.ai/chat":"Сервис с бесплатный планом, который позволяет общаться с раличными LLM на любые темы",
-      "https://deepai.org/chat":"Сервис с бесплатный планом, который позволяет общаться с раличными LLM на любые темы",
-      "https://lmarena.ai/":"Сервис бесплатно позволяет общаться с раличными LLM на любые темы и оценивать их эффективность",
-      "https://studyable.app/":"Сервис с бесплатным планом, который поможет справиться с любым домашним заданием",
-      "https://huggingface.co/chat/":"Сервис позволяет общаться с различными LLM",
-      "https://app.giz.ai/assistant?mode=chat":"Сервис позволяет общаться с различными LLM",
-      "https://app.myshell.ai/explore":"Платформа предлагает бесплатный доступ к передовым языковым моделям, включая GPT-4 и другие ведущие LLM, что позволяет пользователям создавать высокоспособных и привлекательных ботов",
-      "https://huggingface.co/spaces/OzzyGT/diffusers-image-fill":"Сервис, который поможет убрать лишнее с фотографии",
-      "https://huggingface.co/spaces/TheEeeeLin/HivisionIDPhotos":"Сервис, который позволяет быстро сделать фото на документы",
-      "https://huggingface.co/spaces/fffiloni/expression-editor":"Нейросеть для управления эмоциями на фото в реальном времени",
-      "https://www.transvribe.com/":"Бесплатный инструмент ИИ, который позволяет быстро получать ответы на любые видео на YouTube",
-      "https://aisaver.io/face-swap-video":"Бесплатный инструмент для изменения лица на видео, необходима регистрация или вход в аккаунт",
-      "https://modulbot.ru/text-generator":"Бесплатный генератор текстов",
-      "https://minitoolai.com/":"Сервис, который предоставляет доступ к нескольким полезным сервисам с ИИ в том числе и GPT-4o",
-      "https://komo.ai/":"Бесплатная поисковая система с ИИ, имеет дополнительные платные функции",
-      "https://heybro.ai/web":"Бесплатный доступ к GPT-4o-mini",
-      "https://kingnish-opengpt-4o.hf.space/?__theme=dark":"Сервис позволяет общаться с GPT-4o, генерировать видео и картинки",
-      "https://pythonspath.ru/gpt4o":"Сервис позволяет использовать GPT-4o",
-      "https://huggingface.co/spaces/kayfahaarukku/fufufafa-makan-brem":"Бесплатный генератор изображений высокого качества",
-      "https://www.genmo.ai/play":"Бесплатный генератор видео, нобходима авторизация",
-      "https://giga.chat/":"Бесплатный ИИ чат из России",
-      "https://storm.genie.stanford.edu/":"ИИ для исследователей, которая способна писать качественные работы, требуется вход в систему",
-      "https://tools.rotato.app/compress":"Бесплатный сервис, который позволяет сжимать видео без видимой потери качества",
       "https://mokker.ai/":"Инструмент для генерации фотографий на основе искусственного интеллекта, требуется регистрация, лимит бесплатно плана: 40 картинок",
       "https://hix.ai/ru/search":"Бесплатная поисковая система с ИИ и подробными ответами на вопросы, включая генерацию перезентаций и ментальную карту",
       "https://llmarena.ru/":"LLM арена, досутупно множество моделей, сайт имеет тёмную тему оформления",
@@ -862,10 +868,241 @@ document.addEventListener("DOMContentLoaded", function () {
       "https://huggingface.co/spaces/fffiloni/text-guided-image-colorization":"Раскрашиваем черно-белые фото бесплатно",
       "https://replit.com/":"Генератор приложений, бесплатный план с ограничениями",
       "https://aihairstyle.net/":"ИИ подберет вам варианты причесок, которые лучше всего будут на вас смотреться",
-      "https://discord.com/invite/domoai":"Нейросеть которая делает анимацию по выбранному стилю, сервис может сгенерировать из исходного ролика анимацию с помощью одной из десяти моделей, весь процесс генерации проходит на Discord сервере разработчиков"
+      "https://discord.com/invite/domoai":"Нейросеть которая делает анимацию по выбранному стилю, сервис может сгенерировать из исходного ролика анимацию с помощью одной из десяти моделей, весь процесс генерации проходит на Discord сервере разработчиков",
+      "https://bgsub.com/webapp/":"Нейросеть для удаления фона у изображений и фото",
+      "https://huggingface.co/spaces/JeffreyXiang/TRELLIS":"Качественные генерации 3D-модели по картинке",
+      "https://mockey.ai/":"Генератор макетов ИИ, который предоставляет набор инструментов для генерации макетов ИИ, фотографии ИИ, генерации изображений ИИ, удаления фона ИИ и многого другого, есть бесплатный план с ограничениями",
+      "https://netwrck.com/":"Сервис предоставляет доступ к множеству моделей LLM и позволяет генерировать изображения",
+      "https://autodraw.com/":"Сервис для создания иконок и быстрых набросков",
+      "https://aistudio.google.com/live":"Официальный сайт для доступа к  Gemini 2.0 Flash",
+      "https://www.krea.ai/edit":"Аналог Adobe Photoshop с ИИ"
   };
+  
+  function applyTheme(backgroundColor, textColor, liColor, liTextColor) {
+    try {
+      // Применяем основные цвета
+      if (document.body) {
+        document.body.style.backgroundColor = backgroundColor;
+      }
+      
+      const h1Element = document.querySelector('h1');
+      if (h1Element) {
+        h1Element.style.color = textColor;
+      }
+  
+      // Цвета элементов списка
+      const listItems = document.querySelectorAll('.aiMenu li');
+      listItems.forEach(li => {
+        if (li) {
+          li.style.backgroundColor = liColor;
+          li.style.color = liTextColor; // Используем liTextColor если задан, иначе textColor
+        }
+      });
+  
+      // Обновляем фон для theme-settings и header-dropdown-item
+      const themeSettings = document.querySelector('.theme-settings');
+      const headerDropdownItems = document.querySelectorAll('.header-dropdown-item');
+      
+      if (themeSettings) {
+        themeSettings.style.backgroundColor = backgroundColor;
+        themeSettings.style.color = textColor;
+      }
+      
+      headerDropdownItems.forEach(item => {
+        if (item) {
+          item.style.backgroundColor = backgroundColor;
+          item.style.color = textColor;
+        }
+      });
+  
+      // Адаптируем цвета меню
+      const headerDropdownMenu = document.getElementById('header-dropdown-menu');
+      const themeDropdownMenu = document.getElementById('theme-dropdown-menu');
+      const themeMenuToggle = document.getElementById('theme-menu-toggle');
+      const headerMenuToggle = document.getElementById('header-menu-toggle');
+      const menuLabel = document.querySelector('.menu-label');
+      const dropdownMenu = document.getElementById('dropdown-menu');
+      const dropdownItems = document.querySelectorAll('.dropdown-item');
+      const searchInput = document.getElementById('searchInput');
+  
+      // Применяем стили к выпадающему меню настроек
+      if (dropdownMenu) {
+        dropdownMenu.style.backgroundColor = backgroundColor;
+        dropdownMenu.style.color = textColor;
+      }
+  
+      // Применяем стили к элементам выпадающего меню
+      dropdownItems.forEach(item => {
+        if (item) {
+          item.style.backgroundColor = backgroundColor;
+          item.style.color = textColor;
+        }
+      });
+  
+      // Стилизуем кнопку меню настроек
+      if (menuLabel) {
+        menuLabel.style.backgroundColor = liColor;
+        menuLabel.style.color = textColor;
+      }
+  
+      if (headerMenuToggle) {
+        headerMenuToggle.style.backgroundColor = liColor;
+        headerMenuToggle.style.color = textColor;
+      }
+      if (themeMenuToggle) {
+        themeMenuToggle.style.backgroundColor = liColor;
+        themeMenuToggle.style.color = textColor;
+      }
+      
+      if (headerDropdownMenu) {
+        headerDropdownMenu.style.backgroundColor = backgroundColor;
+        headerDropdownMenu.style.color = textColor;
+      }
+      
+      if (themeDropdownMenu) {
+        themeDropdownMenu.style.backgroundColor = backgroundColor;
+        themeDropdownMenu.style.color = textColor;
+      }
+  
+      // Применяем стили к поисковому полю
+      if (searchInput) {
+        searchInput.style.backgroundColor = backgroundColor;
+        searchInput.style.color = textColor;
+        searchInput.style.borderColor = liColor;
+      }
+  
+      // Сохраняем текущую тему
+      const currentTheme = {
+        backgroundColor,
+        textColor,
+        liColor,
+        liTextColor
+      };
+      saveTheme(currentTheme);
+  
+    } catch (error) {
+      console.error('Ошибка применения темы:', error);
+    }
+  }
+  
+  // Функция сохранения темы
+  function saveTheme(theme) {
+    try {
+      localStorage.setItem('customTheme', JSON.stringify(theme));
+      console.log('Тема сохранена:', theme);
+    } catch (error) {
+      console.error('Ошибка сохранения темы:', error);
+    }
+  }
+  
+  // Функция загрузки темы
+  function loadTheme() {
+    try {
+      const savedTheme = JSON.parse(localStorage.getItem('customTheme')) || defaultTheme;
+      
+      // Применяем цвета
+      applyTheme(
+        savedTheme.backgroundColor, 
+        savedTheme.textColor, 
+        savedTheme.liColor,
+        savedTheme.liTextColor
+      );
+  
+      // Обновляем значения color picker
+      const bgColorPicker = document.getElementById('bgColorPicker');
+      const textColorPicker = document.getElementById('textColorPicker');
+      const liColorPicker = document.getElementById('liColorPicker');
+      const liTextColorPicker = document.getElementById('liTextColorPicker');
+  
+      if (bgColorPicker) bgColorPicker.value = savedTheme.backgroundColor;
+      if (textColorPicker) textColorPicker.value = savedTheme.textColor;
+      if (liColorPicker) liColorPicker.value = savedTheme.liColor;
+      if (liTextColorPicker) liTextColorPicker.value = savedTheme.liTextColor;
+  
+      return savedTheme;
+    } catch (error) {
+      console.error('Ошибка загрузки темы:', error);
+      return defaultTheme;
+    }
+  }
+  
+  // Навешиваем обработчики событий сразу
+  function initializeThemeListeners() {
+    const bgColorPicker = document.getElementById('bgColorPicker');
+    const textColorPicker = document.getElementById('textColorPicker');
+    const liColorPicker = document.getElementById('liColorPicker');
+    const liTextColorPicker = document.getElementById('liTextColorPicker');
+    const resetThemeBtn = document.getElementById('resetTheme');
+  
+    if (bgColorPicker) {
+      bgColorPicker.addEventListener('change', (e) => {
+        applyTheme(
+          e.target.value, 
+          textColorPicker.value, 
+          liColorPicker.value,
+          liTextColorPicker.value
+        );
+      });
+    }
+  
+    if (textColorPicker) {
+      textColorPicker.addEventListener('change', (e) => {
+        applyTheme(
+          bgColorPicker.value, 
+          e.target.value, 
+          liColorPicker.value,
+          liTextColorPicker.value
+        );
+      });
+    }
+  
+    if (liColorPicker) {
+      liColorPicker.addEventListener('change', (e) => {
+        applyTheme(
+          bgColorPicker.value, 
+          textColorPicker.value, 
+          e.target.value,
+          liTextColorPicker.value
+        );
+      });
+    }
+  
+    if (liTextColorPicker) {
+      liTextColorPicker.addEventListener('change', (e) => {
+        applyTheme(
+          bgColorPicker.value, 
+          textColorPicker.value, 
+          liColorPicker.value,
+          e.target.value
+        );
+      });
+    }
+  
+    // Кнопка сброса темы
+    if (resetThemeBtn) {
+      resetThemeBtn.addEventListener('click', () => {
+        applyTheme(
+          defaultTheme.backgroundColor, 
+          defaultTheme.textColor, 
+          defaultTheme.liColor,
+          defaultTheme.liTextColor
+        );
+      });
+    }
+  }
+  
+  const defaultTheme = {
+    backgroundColor: '#a1a1a1',
+    textColor: '#ffde22',
+    liColor: '#70040e',
+    liTextColor: '#ffffff'
+  };
+  
     // Проверяем обновления при загрузке страницы
     checkForUpdates();
+    loadTheme()
+    // Навешиваем обработчики
+    initializeThemeListeners();
     initializePage();
     initializePopup();
     // Проверяем, существует ли элемент 'translatedDescriptions' в localStorage

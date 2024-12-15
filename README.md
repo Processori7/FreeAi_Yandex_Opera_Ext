@@ -15,7 +15,10 @@ If you're using Git, go to the directory with the extension and run:
 ```
 git pull
 ```
-Or download the archive and copy the replacement files.
+Or download the archive and copy the replacement files.  
+
+# Thanks  
+Thank you for your help with the layout and design of [ShikoDay](https://github.com/ShikoDay) :)  
 
 # Описание 
 Это расширение, которое позволяет удобно пользоваться бесплатными сервисами ИИ в браузере (Yandex или Opera). 
@@ -34,4 +37,7 @@ git clone https://github.com/Processori7/FreeAi_Yandex_Opera_Ext.git
 ```
 git pull
 ```
-Или скачайте архив и копируйте файлы с заменой.
+Или скачайте архив и копируйте файлы с заменой.  
+
+# Благодарности  
+Благодарю за помощь с вёрсткой и дизайном [ShikoDay](https://github.com/ShikoDay) :)
