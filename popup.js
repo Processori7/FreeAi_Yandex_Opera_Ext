@@ -89,7 +89,7 @@ document.addEventListener("DOMContentLoaded", function () {
     "https://huggingface.co/spaces/akhaliq/anychat","https://huggingface.co/spaces/Qwen/QVQ-72B-preview","https://huggingface.co/spaces/stabilityai/stable-diffusion-3.5-large","https://huggingface.co/spaces/eswardivi/phi-4","https://huggingface.co/spaces/playgroundai/playground-v2.5","https://huggingface.co/spaces/llamameta/llama3.1-405B","https://huggingface.co/spaces/Qwen/Qwen2.5-Coder-demo",
     "https://huggingface.co/spaces/Lightricks/LTX-Video-Playground","https://huggingface.co/spaces/LGAI-EXAONE/EXAONE-3.5-7.8B-Instruct-Demo","https://huggingface.co/spaces/webml-community/text-to-speech-webgpu","https://t.me/gpt_lama_bot","https://www.hailuo.ai/","https://v0.dev/","https://www.whatmore.ai/studio","https://huggingface.co/spaces/tencent/Hunyuan3D-2","https://www.dzine.ai/",
     "https://huggingface.co/spaces/deepseek-ai/deepseek-vl2-small","https://huggingface.co/spaces/Trudy/gemini-image-to-code","https://chat.deepseek.com/","https://backgrounderase.net/home","https://huggingface.co/spaces/webml-community/kokoro-webgpu","https://www.morphic.sh/","https://scira.app/","https://kagi.com/fastgpt","https://shapen.com/","https://alice.yandex.ru/chat/01953c1a-be79-4000-9e88-5177131e2739/",
-    "https://notedly.ai/dashboard","https://playground.ai.cloudflare.com/"
+    "https://notedly.ai/dashboard","https://playground.ai.cloudflare.com/","https://huggingface.co/spaces/ASLP-lab/DiffRhythm","https://chat.akash.network/","https://www.sesame.com/research/crossing_the_uncanny_valley_of_voice#demo"
   ];
 
   function updateCanOpenState() {
@@ -253,7 +253,7 @@ NewYearTheme.addEventListener("change", updateTheme);
 
 // Функция для проверки обновлений
 async function checkForUpdates() {
-    const repoUrl = "https://api.github.com/repos/Processori7/FreeAiChromeSidebar/contents/manifest.json";
+    const repoUrl = "https://api.github.com/repos/Processori7/FreeAi_Yandex_Opera_Ext/contents/manifest.json";
     
     // Получаем локальную версию из manifest.json расширения
     //const localVersion = "16.6.27"; // Для тестирования;
@@ -266,7 +266,6 @@ async function checkForUpdates() {
         // Декодируем содержимое файла manifest.json
         const manifestContent = JSON.parse(atob(data.content));
         const remoteVersion = manifestContent.version; // Извлекаем версию из полученного манифеста
-
         // Сравниваем локальную версию с удаленной версией
         if (localVersion !== remoteVersion) {
             // Если версии не совпадают, показываем сообщение
@@ -279,7 +278,7 @@ async function checkForUpdates() {
 
             // Добавляем обработчик клика на сообщение
             updateMessageElement.onclick = function() {
-                window.open("https://github.com/Processori7/FreeAiChromeSidebar", "_blank");
+                window.open("https://github.com/Processori7/FreeAi_Yandex_Opera_Ext", "_blank");
                 updateMessageElement.style.display = 'none'; // Скрываем сообщение после клика
             };
         }
@@ -1144,6 +1143,16 @@ canOpen.nextSibling.textContent = translateText("Скрыть сервисы, к
       "https://www.chatplayground.ai/":"Сервис предоставляет доступ к множеству LLM, нужна регистрация, есть ограничения на количество запросов",
       "https://playground.ai.cloudflare.com/":"Сервис предоставляет бесплатный доступ к различным LLM",
       "https://letmegpt.com/":"Сервис совмещеает ИИ с Google поиском",
+      "https://chat.akash.network/":"Сервис предоставляет доступ к различным LLM",
+      "https://www.sesame.com/research/crossing_the_uncanny_valley_of_voice#demo":"Голосовой чат-бот для практики английского языка",
+      "https://huggingface.co/spaces/ASLP-lab/DiffRhythm":"Аналог Suno для генерации музыки",
+      "https://playground.allenai.org":"Сервис предоставляет бесплатный доступ к различным LLM",
+      "https://heck.ai/":"Бесплатная поисковая система с ИИ, позволяет использовать несколько LLM бесплатно, ограничение - 50 запросов в день",
+      "https://chat.two.ai/":"Бесплатный чат с ИИ с возможностью поиска информации в Интернете",
+      "https://hix.ai/claude/claude-3-7-sonnet":"Сервис предоставляет доступ к Claude 3.7",
+      "https://chat.felo.ai/":"Felo чат, предоставляет доступ к различным LLM, требуется авторизация",
+      "https://playground.electronhub.top/":"Сервис предоставляет бесплатный доступ к различным LLM и моделям для генерации фото, видео и звука, требуется авторизация, есть лимит - 100000 токенов в день",
+      "https://grok.com/":"Grok Ai - бесплатный чат с ИИ, не доступен в некоторых странах, требуется авторизация"
   };    
 
 function applyTheme(backgroundColor, textColor, liColor, liTextColor) { 
