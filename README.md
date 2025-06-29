@@ -40,7 +40,7 @@ If you're using Git, go to the directory with the extension and run:
 ```
 git pull
 ```
-Or download the archive and copy the replacement files.  
+Or download the archive and copy the replacement files. You can also download the extension update program: https://github.com/Processori7/update/releases and save it in the same directory with the extension files and just run it. Documentation: https://github.com/Processori7/update
 
 # Thanks  
 Thank you for your help with the layout and design of [ShikoDay](https://github.com/ShikoDay) :)  
@@ -87,7 +87,7 @@ git clone https://github.com/Processori7/FreeAi_Yandex_Opera_Ext.git
 ```
 git pull
 ```
-Или скачайте архив и копируйте файлы с заменой.  
+Или скачайте архив и копируйте файлы с заменой. Также можете скачать программу обновления расширений: https://github.com/Processori7/update/releases и сохраните её в одной директории с файлами расширения и просто запустите. Документация: https://github.com/Processori7/update
 
 # Благодарности  
 Благодарю за помощь с вёрсткой и дизайном [ShikoDay](https://github.com/ShikoDay) :)
