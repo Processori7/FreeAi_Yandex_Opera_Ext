@@ -2,7 +2,12 @@ document.addEventListener("DOMContentLoaded", function () {
   const openInNewTab = document.getElementById("openInNewTab");
   const dropdownMenu = document.getElementById('dropdown-menu');
   const searchInput = document.getElementById('searchInput');
-  const userLang = navigator.language || navigator.userLanguage; 
+  const searchSuggestions = document.getElementById("searchSuggestions"); // Используется для подсказок во время поиска
+  const userLang = navigator.language || navigator.userLanguage;
+
+  // Переменные для подсказок
+  let currentSuggestionIndex = -1;
+  let suggestionsList = []; 
   const items = document.querySelectorAll('.aiMenu li'); // Получаем все элементы li из всех списков
   const h1items = document.querySelectorAll('h1');
   const favoriteCheckbox =  document.getElementById("favoriteCheckbox");
@@ -93,7 +98,8 @@ document.addEventListener("DOMContentLoaded", function () {
     "https://huggingface.co/spaces/enzostvs/deepsite","https://huggingface.co/spaces/jasperai/Flux.1-dev-Controlnet-Upscaler","https://huggingface.co/spaces/nightfury/Image_Face_Upscale_Restoration-GFPGAN","https://auphonic.com/","https://wordpress.com/ai-website-builder/","https://t.me/askplexbot","https://digma.ai/","https://lightpdf.com/","https://dxgpt.app/","https://humanize-ai.click/",
     "https://huggingface.co/spaces/nvidia/parakeet-tdt-0.6b-v2","https://app.youlearn.ai/","https://spinbot.com/paraphrasing-tool","https://puter.com/","https://www.eraser.io/ai","https://www.scribbr.com/paraphrasing-tool/","https://www.eraser.io/ai/uml-diagram-generator","https://huggingface.co/spaces/ByteDance/Dolphin","https://gptkit.ai/","https://huggingface.co/spaces/Stable-X/Hi3DGen","https://www.warp.dev/",
     "https://www.wondera.ai/","https://ayesoul.com","https://scispace.com/","https://huggingface.co/spaces/llamameta/Grok-4-heavy-free","https://noiz.io/free-ai-tools/","https://huggingface.co/spaces/Qwen/Qwen3-MT-Demo","https://deep-seek-ai.ru/free-deepseek-chat/","https://gpt-chatbot.ru/openai-o3-mini","https://www.waveterm.dev/","https://cline.bot/","https://addons.mozilla.org/en-US/firefox/addon/polination-ai-chat/",
-    "https://github.com/Processori7/Poli_Sidebar","https://writify.ai/tool/","https://qoder.com/download","https://windsurf.com/download","https://www.trae.ai/","https://qwenlm.github.io/blog/qwen3-coder/","https://huggingface.co/spaces/Qwen/Qwen-Image","https://bagoodex.io/","https://www.design.com/ai-logo-generator","https://www.wolframalpha.com/","https://www.texttospeechpro.com/tts","https://x-minus.pro/ai"
+    "https://github.com/Processori7/Poli_Sidebar","https://writify.ai/tool/","https://qoder.com/download","https://windsurf.com/download","https://www.trae.ai/","https://qwenlm.github.io/blog/qwen3-coder/","https://huggingface.co/spaces/Qwen/Qwen-Image","https://bagoodex.io/","https://www.design.com/ai-logo-generator","https://www.wolframalpha.com/","https://www.texttospeechpro.com/tts","https://x-minus.pro/ai",
+    "https://processor.alwaysdata.net/","https://www.minimax.io/audio/text-to-speech","https://www.meshy.ai/","https://app.reve.com/home","https://www.naturalreaders.com/online/","https://platform.decart.ai/"
   ];
 
 
@@ -496,53 +502,507 @@ favoriteCheckbox.addEventListener('click', function() {
     }
 });
 
-//Поиск
-searchInput.addEventListener('input', function() {
-  const filter = searchInput.value.toLowerCase().trim();
-  const filterWords = filter.split(/\s+/).filter(word => word.length > 0); // Split by spaces and remove empty strings
-  
-  if (!filter) {
-      // If search is empty, show all items
-      items.forEach(item => {
-          item.style.display = "";
-      });
-      hideBlockedServices();
-      return;
+//Поиск с подсказками
+
+// Функция для создания подсказок
+function generateSuggestions(query) {
+  if (!query || query.length < 2) {
+    return [];
   }
 
+  const suggestions = new Set();
+  const queryLower = query.toLowerCase();
+  const queryWords = queryLower.split(/\s+/).filter(word => word.length > 1);
+
+  // Поиск по названиям сервисов
   items.forEach(item => {
-      const text = (item.textContent || item.innerText).toLowerCase();
-      const website = item.getAttribute('data-website');
-      let descriptionText = "";
-      
-      // Get description based on language
-      if (userLang.startsWith("ru")) {
-          descriptionText = websiteDescriptionsRu[website] || "";
-      } else {
-          let userDesc = localStorage.getItem('translatedDescriptions');
-          if (userDesc) {
-              userDesc = JSON.parse(userDesc);
-              const description = userDesc.find(desc => desc.url === website);
-              if (description) {
-                  descriptionText = description.translatedText;
-              }
-          }
+    const text = (item.textContent || item.innerText).toLowerCase();
+    const originalText = (item.textContent || item.innerText).trim(); // Сохраняем оригинальный регистр
+    const website = item.getAttribute('data-website');
+    
+    // Проверяем совпадение с началом названия
+    if (text.startsWith(queryLower)) {
+      suggestions.add(originalText); // Используем оригинальный регистр
+    }
+    
+    // Поиск по частичному совпадению
+    queryWords.forEach(word => {
+      if (text.includes(word)) {
+        suggestions.add(originalText); // Используем оригинальный регистр
       }
-      descriptionText = descriptionText.toLowerCase();
-
-      // First check if any word matches the element text
-      const matchesText = filterWords.some(word => text.includes(word));
-      if (matchesText) {
-          item.style.display = ""; // Show item if text matches
-          return;
-      }
-
-      // If text doesn't match, check description
-      const matchesDescription = filterWords.some(word => descriptionText.includes(word));
-      item.style.display = matchesDescription ? "" : "none";
+    });
   });
+
+  // Поиск по описаниям
+  const descriptions = userLang.startsWith("ru") ? websiteDescriptionsRu : getTranslatedDescriptions();
+  
+  Object.keys(descriptions).forEach(website => {
+    const description = descriptions[website];
+    if (description && typeof description === 'string') {
+      const descLower = description.toLowerCase();
+      
+      queryWords.forEach(word => {
+        if (descLower.includes(word)) {
+          // Находим соответствующий элемент
+          const item = document.querySelector(`[data-website="${website}"]`);
+          if (item) {
+            const originalText = (item.textContent || item.innerText).trim(); // Сохраняем оригинальный регистр
+            suggestions.add(originalText);
+          }
+        }
+      });
+    }
+  });
+
+  // Умные подсказки на основе контекста
+  const contextualSuggestions = generateContextualSuggestions(queryLower, descriptions);
+  contextualSuggestions.forEach(suggestion => suggestions.add(suggestion));
+
+  // Общие ключевые слова для подсказок
+  const keywordSuggestions = {
+    'чат': ['бесплатный чат', 'gpt чат', 'чат с ии'],
+    'gpt': ['chatgpt', 'gpt-4', 'gpt-3.5'],
+    'картинки': ['генератор картинок', 'создание изображений'],
+    'видео': ['генератор видео', 'создание видео'],
+    'поиск': ['поисковая система', 'поиск с ии'],
+    'chat': ['free chat', 'ai chat', 'chatgpt'],
+    'image': ['image generator', 'create images', 'ai images'],
+    'video': ['video generator', 'create video', 'ai video'],
+    'search': ['search engine', 'ai search'],
+    'code': ['coding ai', 'programming', 'code generator'],
+    'текст': ['генератор текста', 'написание текста'],
+    'text': ['text generator', 'writing assistant'],
+    'музыка': ['генератор музыки', 'создание музыки'],
+    'music': ['music generator', 'create music'],
+    'презентация': ['создание презентаций', 'слайды'],
+    'presentation': ['create presentations', 'slides']
+  };
+
+  // Добавляем ключевые подсказки
+  Object.keys(keywordSuggestions).forEach(keyword => {
+    if (queryLower.includes(keyword)) {
+      keywordSuggestions[keyword].forEach(suggestion => {
+        if (suggestion.toLowerCase().includes(queryLower)) {
+          suggestions.add(suggestion);
+        }
+      });
+    }
+  });
+
+  return Array.from(suggestions).slice(0, 8); // Ограничиваем количество подсказок
+}
+
+// Новая функция для генерации контекстных подсказок
+function generateContextualSuggestions(query, descriptions) {
+  const suggestions = [];
+  const queryWords = query.split(/\s+/).filter(word => word.length > 1);
+  
+  // Умные контекстные подсказки
+  const contextMap = {
+    // Описательные фразы на русском
+    'убрать фон': ['удаление фона', 'убрать фон с фото'],
+    'улучшить фото': ['улучшение качества', 'повышение разрешения'],
+    'генерировать код': ['создание кода', 'программирование'],
+    'перевести': ['переводчик', 'перевод текста'],
+    'математика': ['решение задач', 'математические примеры'],
+    'музыка': ['создание музыки', 'генератор музыки'],
+    'логотип': ['создание логотипа', 'генератор логотипов'],
+    'презентация': ['создание презентаций', 'слайды'],
+    
+    // Описательные фразы на английском
+    'remove background': ['background removal', 'remove bg'],
+    'enhance photo': ['photo enhancement', 'upscale image'],
+    'generate code': ['code generation', 'programming'],
+    'translate': ['translator', 'text translation'],
+    'math': ['solve math', 'mathematics'],
+    'music': ['create music', 'music generator'],
+    'logo': ['logo creation', 'logo generator'],
+    'presentation': ['create presentations', 'slides'],
+    
+    // Функциональные фразы
+    'бесплатно': ['free service', 'no registration'],
+    'без регистрации': ['no login required', 'instant access'],
+    'быстро': ['fast generation', 'quick results'],
+    'качественно': ['high quality', 'professional'],
+    'free': ['бесплатно', 'no cost'],
+    'no registration': ['без регистрации', 'instant'],
+    'fast': ['быстро', 'quick'],
+    'quality': ['качественно', 'professional']
+  };
+  
+  // Ищем контекстные совпадения
+  Object.keys(contextMap).forEach(contextKey => {
+    if (query.includes(contextKey)) {
+      contextMap[contextKey].forEach(suggestion => {
+        suggestions.push(suggestion);
+      });
+    }
+  });
+  
+  // Анализ описаний для поиска релевантных сервисов
+  const scoredServices = [];
+  
+  Object.keys(descriptions).forEach(website => {
+    const description = descriptions[website];
+    if (description && typeof description === 'string') {
+      let score = 0;
+      const descLower = description.toLowerCase();
+      
+      // Подсчитываем релевантность
+      queryWords.forEach(word => {
+        // Экранируем специальные символы для безопасного использования в regex
+        const escapedWord = escapeRegExp(word);
+        try {
+          const wordRegex = new RegExp(`\\b${escapedWord}\\b`, 'gi');
+          const matches = (descLower.match(wordRegex) || []).length;
+          score += matches * 2; // Точные совпадения слов весят больше
+        } catch (e) {
+          // Если возникла ошибка с regex, используем простое включение
+          console.warn('Regex error for contextual word:', word, e);
+        }
+        
+        if (descLower.includes(word)) {
+          score += 1; // Частичные совпадения
+        }
+      });
+      
+      if (score > 0) {
+        const item = document.querySelector(`[data-website="${website}"]`);
+        if (item) {
+          const serviceName = (item.textContent || item.innerText).trim();
+          scoredServices.push({ name: serviceName, score, description });
+        }
+      }
+    }
+  });
+  
+  // Сортируем по релевантности и добавляем лучшие совпадения
+  scoredServices
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .forEach(service => {
+      suggestions.push(service.name);
+    });
+  
+  return suggestions;
+}
+
+// Функция для получения переведённых описаний
+function getTranslatedDescriptions() {
+  const stored = localStorage.getItem('translatedDescriptions');
+  if (stored) {
+    const parsed = JSON.parse(stored);
+    const descriptions = {};
+    parsed.forEach(item => {
+      descriptions[item.url] = item.translatedText;
+    });
+    return descriptions;
+  }
+  return {};
+}
+
+// Функция для отображения подсказок
+function showSuggestions(suggestions) {
+  if (!suggestions || suggestions.length === 0) {
+    searchSuggestions.style.display = 'none';
+    return;
+  }
+
+  searchSuggestions.innerHTML = '';
+  suggestionsList = suggestions;
+  currentSuggestionIndex = -1;
+
+  suggestions.forEach((suggestion, index) => {
+    const suggestionElement = document.createElement('div');
+    suggestionElement.className = 'suggestion-item';
+    suggestionElement.textContent = suggestion;
+    suggestionElement.dataset.index = index;
+
+    suggestionElement.addEventListener('click', () => {
+      searchInput.value = suggestion;
+      searchSuggestions.style.display = 'none';
+      performSearch(suggestion, true); // Используем точное совпадение
+    });
+
+    suggestionElement.addEventListener('mouseenter', () => {
+      // Убираем выделение с всех элементов
+      document.querySelectorAll('.suggestion-item').forEach(item => {
+        item.classList.remove('selected');
+      });
+      suggestionElement.classList.add('selected');
+      currentSuggestionIndex = index;
+    });
+
+    searchSuggestions.appendChild(suggestionElement);
+  });
+
+  searchSuggestions.style.display = 'block';
+}
+
+// Функция для навигации по подсказкам с клавиатуры
+function navigateSuggestions(direction) {
+  const suggestions = document.querySelectorAll('.suggestion-item');
+  if (suggestions.length === 0) return;
+
+  // Убираем выделение с текущего элемента
+  if (currentSuggestionIndex >= 0 && currentSuggestionIndex < suggestions.length) {
+    suggestions[currentSuggestionIndex].classList.remove('selected');
+  }
+
+  // Обновляем индекс с циклической навигацией
+  if (direction === 'down') {
+    currentSuggestionIndex = currentSuggestionIndex < suggestions.length - 1 
+      ? currentSuggestionIndex + 1 
+      : 0; // Переходим к первому элементу
+  } else if (direction === 'up') {
+    currentSuggestionIndex = currentSuggestionIndex > 0 
+      ? currentSuggestionIndex - 1 
+      : suggestions.length - 1; // Переходим к последнему элементу
+  }
+
+  // Применяем выделение к новому элементу
+  if (currentSuggestionIndex >= 0 && currentSuggestionIndex < suggestions.length) {
+    const selectedItem = suggestions[currentSuggestionIndex];
+    selectedItem.classList.add('selected');
+    
+    // Прокручиваем контейнер к выбранному элементу
+    scrollToSelectedSuggestion(selectedItem);
+    
+    // Обновляем значение в поле ввода
+    searchInput.value = suggestionsList[currentSuggestionIndex];
+  }
+}
+
+// Функция для прокрутки к выбранному элементу подсказки
+function scrollToSelectedSuggestion(selectedItem) {
+  if (!selectedItem || !searchSuggestions) return;
+  
+  const container = searchSuggestions;
+  const itemOffsetTop = selectedItem.offsetTop;
+  const itemHeight = selectedItem.offsetHeight;
+  const containerScrollTop = container.scrollTop;
+  const containerHeight = container.clientHeight;
+  
+  // Проверяем, находится ли элемент в видимой области
+  const itemBottom = itemOffsetTop + itemHeight;
+  const containerBottom = containerScrollTop + containerHeight;
+  
+  if (itemBottom > containerBottom) {
+    // Элемент ниже видимой области - прокручиваем вниз
+    container.scrollTop = itemOffsetTop + itemHeight - containerHeight + 5;
+  } else if (itemOffsetTop < containerScrollTop) {
+    // Элемент выше видимой области - прокручиваем вверх
+    container.scrollTop = itemOffsetTop - 5;
+  }
+}
+
+// Функция для экранирования специальных символов в регулярных выражениях
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Функция для выполнения поиска
+function performSearch(query, exactMatch = false) {
+  const filter = query.toLowerCase().trim();
+  const filterWords = filter.split(/\s+/).filter(word => word.length > 0);
+  
+  if (!filter) {
+    // Если поиск пустой, показываем все элементы
+    items.forEach(item => {
+      item.style.display = "";
+      item.style.order = "";
+    });
+    hideBlockedServices();
+    return;
+  }
+
+  // Если это точное совпадение (выбор из подсказок), обрабатываем отдельно
+  if (exactMatch) {
+    items.forEach(item => {
+      const originalText = (item.textContent || item.innerText).trim();
+      const matches = originalText.toLowerCase() === filter;
+      
+      // if (matches) {
+      //   console.log(`Exact match found: "${originalText}" matches "${query}"`);
+      // }
+      
+      item.style.display = matches ? "" : "none";
+      item.style.order = "";
+    });
+    return; 
+  }
+
+  // Обычный поиск по релевантности
+  const descriptions = userLang.startsWith("ru") ? websiteDescriptionsRu : getTranslatedDescriptions();
+  const scoredItems = [];
+
+  items.forEach(item => {
+    const text = (item.textContent || item.innerText).toLowerCase();
+    const website = item.getAttribute('data-website');
+    let descriptionText = "";
+    
+    // Получаем описание в зависимости от языка
+    if (descriptions[website]) {
+      descriptionText = descriptions[website].toLowerCase();
+    }
+
+    // Вычисляем релевантность
+    let relevanceScore = 0;
+
+    // Проверка названия сервиса
+    filterWords.forEach(word => {
+      // Экранируем специальные символы для безопасного использования в regex
+      const escapedWord = escapeRegExp(word);
+      // Точное совпадение слова в названии
+      try {
+        const exactWordMatch = new RegExp(`\\b${escapedWord}\\b`, 'gi');
+        const titleMatches = (text.match(exactWordMatch) || []).length;
+        relevanceScore += titleMatches * 100; // Максимальный приоритет для названий
+      } catch (e) {
+        // Если возникла ошибка с regex, используем простое включение
+        console.warn('Regex error for word:', word, e);
+      }
+      
+      // Начало названия
+      if (text.startsWith(word)) {
+        relevanceScore += 50;
+      }
+      
+      // Простое вхождение в название
+      if (text.includes(word)) {
+        relevanceScore += 20;
+      }
+    });
+
+    // Проверка описания
+    if (descriptionText) {
+      filterWords.forEach(word => {
+        // Экранируем специальные символы для безопасного использования в regex
+        const escapedWord = escapeRegExp(word);
+        // Точное совпадение слова в описании
+        try {
+          const exactWordMatch = new RegExp(`\\b${escapedWord}\\b`, 'gi');
+          const descMatches = (descriptionText.match(exactWordMatch) || []).length;
+          relevanceScore += descMatches * 10; // Средний приоритет для описаний
+        } catch (e) {
+          // Если возникла ошибка с regex, используем простое включение
+          console.warn('Regex error for word in description:', word, e);
+        }
+        
+        // Простое вхождение в описание
+        if (descriptionText.includes(word)) {
+          relevanceScore += 5;
+        }
+      });
+    }
+
+    // Бонус за близость слов в описании
+    if (filterWords.length > 1 && descriptionText) {
+      const proximityBonus = calculateProximityBonus(filterWords, descriptionText);
+      relevanceScore += proximityBonus;
+    }
+
+    // Добавляем элемент в список только если есть хоть какие-то совпадения
+    // Показываем все элементы с любой релевантностью, скрываем только те, у которых совпадений совсем нет
+    if (relevanceScore > 0) {
+      scoredItems.push({ item, score: relevanceScore });
+    }
+  });
+
+  // Сортируем по релевантности и отображаем
+  const sortedItems = scoredItems.sort((a, b) => b.score - a.score);
+  
+  items.forEach(item => {
+    const scoredItem = sortedItems.find(si => si.item === item);
+    if (scoredItem) {
+      item.style.display = ""; // Показываем найденные элементы независимо от фильтров
+      item.style.order = -scoredItem.score; // Используем отрицательные значения для сортировки
+    } else {
+      item.style.display = "none";
+      item.style.order = "";
+    }
+  });
+  
+  // НЕ вызываем hideBlockedServices() во время поиска, чтобы показать все найденные результаты
+}
+
+// Вспомогательная функция для вычисления бонуса за близость слов
+function calculateProximityBonus(words, text) {
+  let bonus = 0;
+  const positions = [];
+  
+  // Находим позиции всех слов
+  words.forEach(word => {
+    let index = text.indexOf(word);
+    while (index !== -1) {
+      positions.push(index);
+      index = text.indexOf(word, index + 1);
+    }
+  });
+  
+  // Вычисляем бонус за близость
+  if (positions.length > 1) {
+    positions.sort((a, b) => a - b);
+    for (let i = 0; i < positions.length - 1; i++) {
+      const distance = positions[i + 1] - positions[i];
+      if (distance < 50) { // Бонус за слова, находящиеся рядом
+        bonus += Math.max(0, 25 - distance);
+      }
+    }
+  }
+  
+  return bonus;
+}
+
+searchInput.addEventListener('input', function() {
+  const query = searchInput.value.trim();
+  
+  if (query.length >= 2) {
+    const suggestions = generateSuggestions(query);
+    showSuggestions(suggestions);
+  } else {
+    searchSuggestions.style.display = 'none';
+  }
+  
+  // Выполняем поиск
+  performSearch(query);
 });
 
+// Обработка навигации с клавиатуры
+searchInput.addEventListener('keydown', function(e) {
+  if (searchSuggestions.style.display === 'none') return;
+  
+  switch(e.key) {
+    case 'ArrowDown':
+      e.preventDefault();
+      navigateSuggestions('down');
+      break;
+    case 'ArrowUp':
+      e.preventDefault();
+      navigateSuggestions('up');
+      break;
+    case 'Enter':
+      e.preventDefault();
+      if (currentSuggestionIndex >= 0 && currentSuggestionIndex < suggestionsList.length) {
+        searchInput.value = suggestionsList[currentSuggestionIndex];
+        searchSuggestions.style.display = 'none';
+        performSearch(suggestionsList[currentSuggestionIndex], true); // Используем точное совпадение
+      }
+      break;
+    case 'Escape':
+      searchSuggestions.style.display = 'none';
+      currentSuggestionIndex = -1;
+      break;
+  }
+});
+
+// Скрываем подсказки при клике вне области поиска
+document.addEventListener('click', function(e) {
+  if (!searchInput.contains(e.target) && !searchSuggestions.contains(e.target)) {
+    searchSuggestions.style.display = 'none';
+    currentSuggestionIndex = -1;
+  }
+});
 
 // Функция для перевода текста
 function translateText(text, lang) {
@@ -575,6 +1035,11 @@ if (userLang.startsWith('ru')) {
   document.querySelector('#text-color-headings .translate-text').textContent = 'Цвет заголовков:';
   document.querySelector('#li-back-color .translate-text').textContent = 'Цвет фона элементов:';
   document.querySelector('#li-text-color .translate-text').textContent = 'Цвет текста элементов:';
+  document.querySelector('#tooltip-background-color .translate-text').textContent = 'Цвет фона подсказок:';
+  document.querySelector('#font-family-settings .translate-text').textContent = 'Семейство шрифтов:';
+  document.querySelector('#heading-font-size .translate-text').textContent = 'Размер шрифта заголовков:';
+  document.querySelector('#item-font-size .translate-text').textContent = 'Размер шрифта элементов:';
+  document.querySelector('#tooltip-font-size .translate-text').textContent = 'Размер шрифта подсказок:';
   document.querySelector('#resetTheme .translate-text').textContent = 'Сбросить тему';
   advancedSearch.style.display = "none";
   document.getElementById('advancedSearchText').style.display="none";
@@ -1303,43 +1768,69 @@ canOpen.nextSibling.textContent = translateText("Скрыть сервисы, к
       "https://ebank.nz/aiartgenerator":"Бесплатный сервис для генерации изображений, поддерживает различные стили",
       "https://www.texttospeechpro.com/tts":"Сервис для озвучивания текста",
       "https://x-minus.pro/ai":"Сервис предлагает набор аудиоинструментов с ИИ",
-      "https://postspark.app/screenshot":"Сервис в котором можно быстро собрать красивый дизайн, макет или скриншот проекта"
-  };                 
+      "https://postspark.app/screenshot":"Сервис в котором можно быстро собрать красивый дизайн, макет или скриншот проекта",
+      "https://processor.alwaysdata.net/":"Сайт с бесплатными сервисами с ИИ, теперь расширение будет с Вами всегда",
+      "https://www.zeroregai.com/":"Сервис предоставляет доступ к нескольким LLM",
+      "https://www.anysummary.app/":"Помощник в работе с документами любого формата, позволяет быстро получать нужную информацию",
+      "https://www.meshy.ai/":"Сервис для генерации 3D-моделей, требуется авторизация",
+      "https://app.reve.com/home":"Фотошоп с ИИ, требуется авторизация",
+      "https://www.naturalreaders.com/online/":"Сервис для озвучивания текста натуральными голосами",
+      "https://lovevoice.ai/":"Сервис для озвучивания текста",
+      "https://speechma.com/":"Сервис для озвучивания текста, есть множество голосов",
+      "https://platform.decart.ai/":"ИИ-фотошоп для видео с бесплатным планом, требуется авторизация"
+  };              
 
-function applyTheme(backgroundColor, textColor, liColor, liTextColor) { 
+function applyTheme(backgroundColor, textColor, liColor, liTextColor, tooltipBgColor, fontFamily, headingFontSize, itemFontSize, tooltipFontSize) { 
   try {
     // Применяем основные цвета
     if (document.body) {
       document.body.style.backgroundColor = backgroundColor;
+      document.body.style.fontFamily = fontFamily || "'Droid serif', serif";
     }
     
-    const h1Element = document.querySelector('h1');
-    if (h1Element) {
-      h1Element.style.color = textColor;
-    }
+    const h1Elements = document.querySelectorAll('h1');
+    h1Elements.forEach(h1 => {
+      if (h1) {
+        h1.style.color = textColor;
+        h1.style.fontFamily = fontFamily || "'Droid serif', serif";
+        h1.style.fontSize = (headingFontSize || 32) + 'px';
+      }
+    });
 
     // Цвета элементов списка
     const listItems = document.querySelectorAll('.aiMenu li');
     listItems.forEach(li => {
       if (li) {
         li.style.backgroundColor = liColor;
-        li.style.color = liTextColor; // Используем liTextColor если задан, иначе textColor
+        li.style.color = liTextColor;
+        li.style.fontFamily = fontFamily || "'Droid serif', serif";
+        li.style.fontSize = (itemFontSize || 16) + 'px';
       }
     });
 
     // Обновляем фон для theme-settings и header-dropdown-item
     const themeSettings = document.querySelector('.theme-settings');
+    const themeSettingsTitle = document.getElementById('theme-settings-title');
     const headerDropdownItems = document.querySelectorAll('.header-dropdown-item');
     
     if (themeSettings) {
       themeSettings.style.backgroundColor = liColor;
       themeSettings.style.color = textColor;
+      themeSettings.style.fontFamily = fontFamily || "'Droid serif', serif";
+    }
+    
+    if (themeSettingsTitle) {
+      themeSettingsTitle.style.color = textColor;
+      themeSettingsTitle.style.fontFamily = fontFamily || "'Droid serif', serif";
+      themeSettingsTitle.style.fontSize = (headingFontSize || 32) + 'px';
     }
     
     headerDropdownItems.forEach(item => {
       if (item) {
         item.style.backgroundColor = liColor;
         item.style.color = textColor;
+        item.style.fontFamily = fontFamily || "'Droid serif', serif";
+        item.style.fontSize = (itemFontSize || 16) + 'px';
       }
     });
 
@@ -1357,6 +1848,7 @@ function applyTheme(backgroundColor, textColor, liColor, liTextColor) {
     if (dropdownMenu) {
       dropdownMenu.style.backgroundColor = backgroundColor;
       dropdownMenu.style.color = textColor;
+      dropdownMenu.style.fontFamily = fontFamily || "'Droid serif', serif";
     }
 
     // Применяем стили к элементам выпадающего меню
@@ -1364,6 +1856,8 @@ function applyTheme(backgroundColor, textColor, liColor, liTextColor) {
       if (item) {
         item.style.backgroundColor = liColor;
         item.style.color = textColor;
+        item.style.fontFamily = fontFamily || "'Droid serif', serif";
+        item.style.fontSize = (itemFontSize || 16) + 'px';
       }
     });
 
@@ -1371,25 +1865,30 @@ function applyTheme(backgroundColor, textColor, liColor, liTextColor) {
     if (menuLabel) {
       menuLabel.style.backgroundColor = liColor;
       menuLabel.style.color = textColor;
+      menuLabel.style.fontFamily = fontFamily || "'Droid serif', serif";
     }
 
     if (headerMenuToggle) {
       headerMenuToggle.style.backgroundColor = liColor;
       headerMenuToggle.style.color = textColor;
+      headerMenuToggle.style.fontFamily = fontFamily || "'Droid serif', serif";
     }
     if (themeMenuToggle) {
       themeMenuToggle.style.backgroundColor = liColor;
       themeMenuToggle.style.color = textColor;
+      themeMenuToggle.style.fontFamily = fontFamily || "'Droid serif', serif";
     }
     
     if (headerDropdownMenu) {
       headerDropdownMenu.style.backgroundColor = backgroundColor;
       headerDropdownMenu.style.color = textColor;
+      headerDropdownMenu.style.fontFamily = fontFamily || "'Droid serif', serif";
     }
     
     if (themeDropdownMenu) {
       themeDropdownMenu.style.backgroundColor = backgroundColor;
       themeDropdownMenu.style.color = textColor;
+      themeDropdownMenu.style.fontFamily = fontFamily || "'Droid serif', serif";
     }
 
     // Применяем стили к поисковому полю
@@ -1397,6 +1896,60 @@ function applyTheme(backgroundColor, textColor, liColor, liTextColor) {
       searchInput.style.backgroundColor = liColor;
       searchInput.style.color = textColor;
       searchInput.style.borderColor = liColor;
+      searchInput.style.fontFamily = fontFamily || "'Droid serif', serif";
+      searchInput.style.fontSize = (itemFontSize || 16) + 'px';
+    }
+
+    // Применяем стили к подсказкам
+    const searchSuggestions = document.getElementById('searchSuggestions');
+    if (searchSuggestions) {
+      searchSuggestions.style.backgroundColor = backgroundColor;
+      searchSuggestions.style.borderColor = liColor;
+      searchSuggestions.style.fontFamily = fontFamily || "'Droid serif', serif";
+    }
+
+    const suggestionItems = document.querySelectorAll('.suggestion-item');
+    suggestionItems.forEach(item => {
+      if (item) {
+        item.style.color = textColor;
+        item.style.fontFamily = fontFamily || "'Droid serif', serif";
+        item.style.fontSize = (itemFontSize || 16) + 'px';
+      }
+    });
+
+    // Применяем стили к всплывающим подсказкам (tooltips)
+    const popup = document.querySelector('.popup');
+    if (popup) {
+      popup.style.backgroundColor = tooltipBgColor || '#333';
+      popup.style.fontFamily = fontFamily || "'Droid serif', serif";
+      popup.style.fontSize = (tooltipFontSize || 14) + 'px';
+    }
+
+    // Применяем стили к лейблам в настройках темы
+    const themeLabels = document.querySelectorAll('.theme-settings label, .theme-settings .translate-text');
+    themeLabels.forEach(label => {
+      if (label) {
+        label.style.fontFamily = fontFamily || "'Droid serif', serif";
+        label.style.fontSize = (itemFontSize || 16) + 'px';
+        label.style.color = textColor;
+      }
+    });
+
+    // Применяем стили к значениям размеров шрифтов
+    const fontSizeValues = document.querySelectorAll('#headingFontSizeValue, #itemFontSizeValue, #tooltipFontSizeValue');
+    fontSizeValues.forEach(value => {
+      if (value) {
+        value.style.fontFamily = fontFamily || "'Droid serif', serif";
+        value.style.fontSize = (itemFontSize || 16) + 'px';
+        value.style.color = textColor;
+      }
+    });
+
+    // Применяем стили к кнопке сброса
+    const resetButton = document.getElementById('resetTheme');
+    if (resetButton) {
+      resetButton.style.fontFamily = fontFamily || "'Droid serif', serif";
+      resetButton.style.fontSize = (itemFontSize || 16) + 'px';
     }
 
     // Сохраняем текущую тему
@@ -1404,7 +1957,12 @@ function applyTheme(backgroundColor, textColor, liColor, liTextColor) {
       backgroundColor,
       textColor,
       liColor,
-      liTextColor
+      liTextColor,
+      tooltipBgColor: tooltipBgColor || '#333',
+      fontFamily: fontFamily || "'Droid serif', serif",
+      headingFontSize: headingFontSize || 32,
+      itemFontSize: itemFontSize || 16,
+      tooltipFontSize: tooltipFontSize || 14
     };
     saveTheme(currentTheme);
 
@@ -1417,7 +1975,7 @@ function applyTheme(backgroundColor, textColor, liColor, liTextColor) {
 function saveTheme(theme) {
   try {
     localStorage.setItem('customTheme', JSON.stringify(theme));
-    console.log('Тема сохранена:', theme);
+    // console.log('Тема сохранена:', theme);
   } catch (error) {
     console.error('Ошибка сохранения темы:', error);
   }
@@ -1433,19 +1991,46 @@ function loadTheme() {
       savedTheme.backgroundColor, 
       savedTheme.textColor, 
       savedTheme.liColor,
-      savedTheme.liTextColor
+      savedTheme.liTextColor,
+      savedTheme.tooltipBgColor,
+      savedTheme.fontFamily,
+      savedTheme.headingFontSize,
+      savedTheme.itemFontSize,
+      savedTheme.tooltipFontSize
     );
 
-    // Обновляем значения color picker
+    // Обновляем значения color picker и других элементов
     const bgColorPicker = document.getElementById('bgColorPicker');
     const textColorPicker = document.getElementById('textColorPicker');
     const liColorPicker = document.getElementById('liColorPicker');
     const liTextColorPicker = document.getElementById('liTextColorPicker');
+    const tooltipBgColorPicker = document.getElementById('tooltipBgColorPicker');
+    const fontFamilySelect = document.getElementById('fontFamilySelect');
+    const headingFontSize = document.getElementById('headingFontSize');
+    const itemFontSize = document.getElementById('itemFontSize');
+    const tooltipFontSize = document.getElementById('tooltipFontSize');
+    const headingFontSizeValue = document.getElementById('headingFontSizeValue');
+    const itemFontSizeValue = document.getElementById('itemFontSizeValue');
+    const tooltipFontSizeValue = document.getElementById('tooltipFontSizeValue');
 
     if (bgColorPicker) bgColorPicker.value = savedTheme.backgroundColor;
     if (textColorPicker) textColorPicker.value = savedTheme.textColor;
     if (liColorPicker) liColorPicker.value = savedTheme.liColor;
     if (liTextColorPicker) liTextColorPicker.value = savedTheme.liTextColor;
+    if (tooltipBgColorPicker) tooltipBgColorPicker.value = savedTheme.tooltipBgColor || '#333';
+    if (fontFamilySelect) fontFamilySelect.value = savedTheme.fontFamily || "'Droid serif', serif";
+    if (headingFontSize) {
+      headingFontSize.value = savedTheme.headingFontSize || 32;
+      if (headingFontSizeValue) headingFontSizeValue.textContent = (savedTheme.headingFontSize || 32) + 'px';
+    }
+    if (itemFontSize) {
+      itemFontSize.value = savedTheme.itemFontSize || 16;
+      if (itemFontSizeValue) itemFontSizeValue.textContent = (savedTheme.itemFontSize || 16) + 'px';
+    }
+    if (tooltipFontSize) {
+      tooltipFontSize.value = savedTheme.tooltipFontSize || 14;
+      if (tooltipFontSizeValue) tooltipFontSizeValue.textContent = (savedTheme.tooltipFontSize || 14) + 'px';
+    }
 
     return savedTheme;
   } catch (error) {
@@ -1460,49 +2045,72 @@ function initializeThemeListeners() {
   const textColorPicker = document.getElementById('textColorPicker');
   const liColorPicker = document.getElementById('liColorPicker');
   const liTextColorPicker = document.getElementById('liTextColorPicker');
+  const tooltipBgColorPicker = document.getElementById('tooltipBgColorPicker');
+  const fontFamilySelect = document.getElementById('fontFamilySelect');
+  const headingFontSize = document.getElementById('headingFontSize');
+  const itemFontSize = document.getElementById('itemFontSize');
+  const tooltipFontSize = document.getElementById('tooltipFontSize');
+  const headingFontSizeValue = document.getElementById('headingFontSizeValue');
+  const itemFontSizeValue = document.getElementById('itemFontSizeValue');
+  const tooltipFontSizeValue = document.getElementById('tooltipFontSizeValue');
   const resetThemeBtn = document.getElementById('resetTheme');
 
+  function updateTheme() {
+    applyTheme(
+      bgColorPicker ? bgColorPicker.value : defaultTheme.backgroundColor,
+      textColorPicker ? textColorPicker.value : defaultTheme.textColor,
+      liColorPicker ? liColorPicker.value : defaultTheme.liColor,
+      liTextColorPicker ? liTextColorPicker.value : defaultTheme.liTextColor,
+      tooltipBgColorPicker ? tooltipBgColorPicker.value : defaultTheme.tooltipBgColor,
+      fontFamilySelect ? fontFamilySelect.value : defaultTheme.fontFamily,
+      headingFontSize ? headingFontSize.value : defaultTheme.headingFontSize,
+      itemFontSize ? itemFontSize.value : defaultTheme.itemFontSize,
+      tooltipFontSize ? tooltipFontSize.value : defaultTheme.tooltipFontSize
+    );
+  }
+
   if (bgColorPicker) {
-    bgColorPicker.addEventListener('change', (e) => {
-      applyTheme(
-        e.target.value, 
-        textColorPicker.value, 
-        liColorPicker.value,
-        liTextColorPicker.value
-      );
-    });
+    bgColorPicker.addEventListener('change', updateTheme);
   }
 
   if (textColorPicker) {
-    textColorPicker.addEventListener('change', (e) => {
-      applyTheme(
-        bgColorPicker.value, 
-        e.target.value, 
-        liColorPicker.value,
-        liTextColorPicker.value
-      );
-    });
+    textColorPicker.addEventListener('change', updateTheme);
   }
 
   if (liColorPicker) {
-    liColorPicker.addEventListener('change', (e) => {
-      applyTheme(
-        bgColorPicker.value, 
-        textColorPicker.value, 
-        e.target.value,
-        liTextColorPicker.value
-      );
-    });
+    liColorPicker.addEventListener('change', updateTheme);
   }
 
   if (liTextColorPicker) {
-    liTextColorPicker.addEventListener('change', (e) => {
-      applyTheme(
-        bgColorPicker.value, 
-        textColorPicker.value, 
-        liColorPicker.value,
-        e.target.value
-      );
+    liTextColorPicker.addEventListener('change', updateTheme);
+  }
+
+  if (tooltipBgColorPicker) {
+    tooltipBgColorPicker.addEventListener('change', updateTheme);
+  }
+
+  if (fontFamilySelect) {
+    fontFamilySelect.addEventListener('change', updateTheme);
+  }
+
+  if (headingFontSize) {
+    headingFontSize.addEventListener('input', (e) => {
+      if (headingFontSizeValue) headingFontSizeValue.textContent = e.target.value + 'px';
+      updateTheme();
+    });
+  }
+
+  if (itemFontSize) {
+    itemFontSize.addEventListener('input', (e) => {
+      if (itemFontSizeValue) itemFontSizeValue.textContent = e.target.value + 'px';
+      updateTheme();
+    });
+  }
+
+  if (tooltipFontSize) {
+    tooltipFontSize.addEventListener('input', (e) => {
+      if (tooltipFontSizeValue) tooltipFontSizeValue.textContent = e.target.value + 'px';
+      updateTheme();
     });
   }
 
@@ -1513,8 +2121,32 @@ function initializeThemeListeners() {
         defaultTheme.backgroundColor, 
         defaultTheme.textColor, 
         defaultTheme.liColor,
-        defaultTheme.liTextColor
+        defaultTheme.liTextColor,
+        defaultTheme.tooltipBgColor,
+        defaultTheme.fontFamily,
+        defaultTheme.headingFontSize,
+        defaultTheme.itemFontSize,
+        defaultTheme.tooltipFontSize
       );
+      // Обновляем значения контролов
+      if (bgColorPicker) bgColorPicker.value = defaultTheme.backgroundColor;
+      if (textColorPicker) textColorPicker.value = defaultTheme.textColor;
+      if (liColorPicker) liColorPicker.value = defaultTheme.liColor;
+      if (liTextColorPicker) liTextColorPicker.value = defaultTheme.liTextColor;
+      if (tooltipBgColorPicker) tooltipBgColorPicker.value = defaultTheme.tooltipBgColor;
+      if (fontFamilySelect) fontFamilySelect.value = defaultTheme.fontFamily;
+      if (headingFontSize) {
+        headingFontSize.value = defaultTheme.headingFontSize;
+        if (headingFontSizeValue) headingFontSizeValue.textContent = defaultTheme.headingFontSize + 'px';
+      }
+      if (itemFontSize) {
+        itemFontSize.value = defaultTheme.itemFontSize;
+        if (itemFontSizeValue) itemFontSizeValue.textContent = defaultTheme.itemFontSize + 'px';
+      }
+      if (tooltipFontSize) {
+        tooltipFontSize.value = defaultTheme.tooltipFontSize;
+        if (tooltipFontSizeValue) tooltipFontSizeValue.textContent = defaultTheme.tooltipFontSize + 'px';
+      }
     });
   }
 }
@@ -1523,7 +2155,12 @@ const defaultTheme = {
   backgroundColor: '#a1a1a1',
   textColor: '#ffde22',
   liColor: '#70040e',
-  liTextColor: '#ffffff'
+  liTextColor: '#ffffff',
+  tooltipBgColor: '#333333',
+  fontFamily: "'Droid serif', serif",
+  headingFontSize: 32,
+  itemFontSize: 16,
+  tooltipFontSize: 14
 };
 
   // Проверяем обновления при загрузке страницы
