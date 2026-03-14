@@ -1007,10 +1007,49 @@ document.addEventListener('click', function(e) {
 });
 
 // Функция для перевода текста
+// Функции для кэширования переводов
+function getTranslationCacheKey(sourceLang, targetLang) {
+    return `translation_cache_${sourceLang}_${targetLang}`;
+}
+
+function getCachedTranslation(text, sourceLang, targetLang) {
+    const cacheKey = getTranslationCacheKey(sourceLang, targetLang);
+    const cache = JSON.parse(localStorage.getItem(cacheKey) || '{}');
+    return cache[text] || null;
+}
+
+function setCachedTranslation(text, sourceLang, targetLang, translation) {
+    const cacheKey = getTranslationCacheKey(sourceLang, targetLang);
+    const cache = JSON.parse(localStorage.getItem(cacheKey) || '{}');
+    cache[text] = translation;
+    localStorage.setItem(cacheKey, JSON.stringify(cache));
+}
+
+// Функция для перевода текста с кэшированием
 function translateText(text, lang) {
-    translateUrl = "https://translate.googleapis.com/translate_a/single?format=text&client=gtx&sl=" + lang + "&tl=" + userLang + "&dt=t&q=" + encodeURIComponent(text); //lang = "ru"
+    const srcLang = lang.slice(0, 2);
+    const tgtLang = userLang.slice(0, 2);
+    
+    // Проверяем если исходный и целевой языки одинаковые, перевод не нужен
+    if (srcLang === tgtLang) {
+        return text;
+    }
+    
+    // Проверяем кэш перед запросом
+    const cachedTranslation = getCachedTranslation(text, srcLang, tgtLang);
+    if (cachedTranslation) {
+        return cachedTranslation;
+    }
+    
+    // Если в кэше нет, делаем запрос
+    translateUrl = "https://translate.googleapis.com/translate_a/single?format=text&client=gtx&sl=" + srcLang + "&tl=" + tgtLang + "&dt=t&q=" + encodeURIComponent(text);
     translatedText = httpGet(translateUrl);
-    return cleanAndTrimData(translatedText);
+    const cleanedTranslation = cleanAndTrimData(translatedText);
+    
+    // Сохраняем перевод в кэш
+    setCachedTranslation(text, srcLang, tgtLang, cleanedTranslation);
+    
+    return cleanedTranslation;
 }
 
 if (userLang.startsWith('ru')) {
@@ -1213,7 +1252,6 @@ canOpen.nextSibling.textContent = translateText("Скрыть сервисы, к
                 var website = this.getAttribute('data-website');
                 if (descriptions.hasOwnProperty(website)) {
                     var description = descriptions[website];
-                    let translateUrl = "https://translate.googleapis.com/translate_a/single?format=text&client=gtx&sl=" + "ru" + "&tl=" + userLang + "&dt=t&q=" + description;
                     // sl – язык оригинала, tl – язык для перевода, originalText – текст запроса (можно использовать результат string.match(/.{1,2000}(?=\.)/gi))
                     if(userLang.startsWith('ru'))
                         {
@@ -1221,9 +1259,9 @@ canOpen.nextSibling.textContent = translateText("Скрыть сервисы, к
                         }
                     else
                     {
-                        let translatedText = httpGet(translateUrl);
-                        translatedText = cleanAndTrimData(translatedText);
-                        popup.textContent =translatedText;
+                        // Используем функцию translateText с кэшированием
+                        let translatedText = translateText(description, "ru");
+                        popup.textContent = translatedText;
                     }
 
                     // Устанавливаем позицию popup
@@ -1246,13 +1284,11 @@ canOpen.nextSibling.textContent = translateText("Скрыть сервисы, к
         for (var url in descriptions) {
             if (descriptions.hasOwnProperty(url)) {
                 var description = descriptions[url]; // Получаем описание для текущего URL
-                let translateUrl = "https://translate.googleapis.com/translate_a/single?format=text&client=gtx&sl=ru&tl=" + userLang + "&dt=t&q=" + encodeURIComponent(description);
     
                 // Если язык пользователя не русский, переводим описание
                 if (!userLang.startsWith('ru')) {
-                    // Получаем переведенный текст
-                    let translatedText = httpGet(translateUrl);
-                    translatedText = cleanAndTrimData(translatedText);
+                    // Используем функцию translateText с кэшированием
+                    let translatedText = translateText(description, "ru");
                     userLangDesc.push({url, translatedText }); // Добавляем объект с URL и переведенным описанием
                 } else {
                     // Если язык русский, просто добавляем оригинальное описание
@@ -1835,8 +1871,13 @@ canOpen.nextSibling.textContent = translateText("Скрыть сервисы, к
       "https://github.com/marketplace?type=models":"Сервис предоставляет доступ к различным LLM моделям от разных компаний, есть бесплатные модели, а также модели с платным доступом",
       "https://arena.ai/":"Сервис предоставляет доступ к различным LLM моделям от разных компаний",
       "https://chat.falconllm.tii.ae/":"Сервис предоставляет доступ к различным LLM моделям Falcon",
-      "https://www.recraft.ai/blog/introducing-recraft-v4-design-taste-meets-image-generation":"Генератор картинок специально для дизайнеро"
-  };           
+      "https://www.recraft.ai/blog/introducing-recraft-v4-design-taste-meets-image-generation":"Генератор картинок специально для дизайнеро",
+      "https://www.designarena.ai/":"Сервис предоставляет доступ к различным LLM моделям от разных компаний, а также к генератору изображений для дизайнеров",
+      "https://ru.ruwiki.ru/wiki/%D0%97%D0%B0%D0%B3%D0%BB%D0%B0%D0%B2%D0%BD%D0%B0%D1%8F_%D1%81%D1%82%D1%80%D0%B0%D0%BD%D0%B8%D1%86%D0%B0:":"Бесплатная поисковая система",
+      "https://chat.cosverse.ai/":"Сервис предоставляет доступ к различным LLM моделям от разных компаний, есть бесплтаный план, требуется авторизация",
+      "https://link.fuckicoding.com/#/chat":"Сервис предоставляет доступ к различным LLM моделям от разных компаний",
+      "https://www.studley.ai/study-sets":"Сервис для обучения на основе ИИ, требуется регистрация"
+  };             
 
 function applyTheme(backgroundColor, textColor, liColor, liTextColor, tooltipBgColor, fontFamily, headingFontSize, itemFontSize, tooltipFontSize) { 
   try {
