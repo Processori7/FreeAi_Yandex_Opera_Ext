@@ -517,7 +517,7 @@ NewYearTheme.addEventListener("change", updateTheme);
 
 // Функция для проверки обновлений
 async function checkForUpdates() {
-    const repoUrl = "https://api.github.com/repos/Processori7/FreeAiChromeSidebar/contents/manifest.json";
+    const repoUrl = "https://api.github.com/repos/Processori7/FreeAi_Yandex_Ext/contents/manifest.json";
     
     // Получаем локальную версию из manifest.json расширения
     //const localVersion = "16.6.27"; // Для тестирования;
