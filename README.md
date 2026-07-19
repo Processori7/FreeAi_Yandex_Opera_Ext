@@ -1,5 +1,5 @@
 # Description
-This is an extension that allows you to conveniently use free AI services in you browser (Yandex or Opera).  
+This is an extension that allows you to conveniently use free AI services in you browser (Yandex).  
 
 # Features  
 ## The settings menu is located in the upper right corner and opens when you click on "⚙️".
@@ -30,7 +30,7 @@ This menu allows you to fully customize the design of the extension for yourself
 
 Download and unzip or clone the code.
 ```
-git clone https://github.com/Processori7/FreeAi_Yandex_Opera_Ext.git
+git clone https://github.com/Processori7/FreeAi_Yandex_Ext.git
 ```
 Next, in the browser, go to "Settings" - "Extensions" - "Manage extensions" - at the top right, click on the switch and turn on the developer mode, then click on "Download unpacked extension" and select the folder: FreeAi_Yandex_Opera_Ext, after that, you will have the extension.
 
@@ -40,13 +40,12 @@ If you're using Git, go to the directory with the extension and run:
 ```
 git pull
 ```
-Or download the archive and copy the replacement files. You can also download the extension update program: https://github.com/Processori7/update/releases and save it in the same directory with the extension files and just run it. Documentation: https://github.com/Processori7/update
 
 # Thanks  
 Thank you for your help with the layout and design of [ShikoDay](https://github.com/ShikoDay) :)  
 
 # Описание 
-Это расширение, которое позволяет удобно пользоваться бесплатными сервисами ИИ в браузере (Yandex или Opera).  
+Это расширение, которое позволяет удобно пользоваться бесплатными сервисами ИИ в браузере (Yandex).  
 
 # Возможности  
 ## Меню настроек находиться в правом верхнем углу и открывается при нажатии на "⚙️".
@@ -77,9 +76,8 @@ Thank you for your help with the layout and design of [ShikoDay](https://github.
 
 Скачайте и разархивируйте или клонируйте код. 
 ```
-git clone https://github.com/Processori7/FreeAi_Yandex_Opera_Ext.git
+git clone https://github.com/Processori7/FreeAi_Yandex_Ext.git
 ```
-Далее в браузере Chrome перейдите в "Настройки" - "Расширения" - "Управление расширениями" - на верху справа нажмите на переключатель и включите режим разработчика, далее нажмите на "Загрузить распакованное расширение" и выберите папку: FreeAi_Yandex_Opera_Ext, после этого, у вас появится расширение.
 
 # Обновление
 
@@ -87,7 +85,6 @@ git clone https://github.com/Processori7/FreeAi_Yandex_Opera_Ext.git
 ```
 git pull
 ```
-Или скачайте архив и копируйте файлы с заменой. Также можете скачать программу обновления расширений: https://github.com/Processori7/update/releases и сохраните её в одной директории с файлами расширения и просто запустите. Документация: https://github.com/Processori7/update
 
 # Благодарности  
 Благодарю за помощь с вёрсткой и дизайном [ShikoDay](https://github.com/ShikoDay) :)
